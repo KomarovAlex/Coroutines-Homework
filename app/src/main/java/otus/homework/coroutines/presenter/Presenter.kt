@@ -1,18 +1,26 @@
 package otus.homework.coroutines.presenter
 
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlin.coroutines.CoroutineContext
 
-interface Presenter {
-    val scope: CoroutineScope
-        get() = PresenterScope()
+abstract class Presenter<T> {
+    protected var scope: CoroutineScope = PresenterScope()
+
+    protected var view: T? = null
+
+    fun attachView(view: T) {
+        this.view = view
+    }
+
+    fun detachView() {
+        view = null
+        scope.cancel()
+    }
 }
 
-class PresenterScope: CoroutineScope {
-    override val coroutineContext: CoroutineContext
-        get() = Dispatchers.Main + CoroutineName("CatsCoroutine")
+class PresenterScope : CoroutineScope {
+    override val coroutineContext: CoroutineContext =
+         Dispatchers.Main + CoroutineName("CatsCoroutine") + SupervisorJob()
 }
 
 
