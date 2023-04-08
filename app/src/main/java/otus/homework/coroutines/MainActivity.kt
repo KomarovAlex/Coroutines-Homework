@@ -1,13 +1,24 @@
 package otus.homework.coroutines
 
 import android.os.Bundle
+import android.widget.Button
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import otus.homework.coroutines.presenter.CatsPresenter
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
 import otus.homework.coroutines.view.CatsView
+import otus.homework.coroutines.viewmodel.CatsViewModel
+import otus.homework.coroutines.viewmodel.Error
+import otus.homework.coroutines.viewmodel.Load
+import otus.homework.coroutines.viewmodel.Success
 
 class MainActivity : AppCompatActivity() {
 
-    lateinit var catsPresenter: CatsPresenter
+    private val catsViewModel: CatsViewModel by viewModels {
+        CatsViewModel.CatsViewModelFactory(diContainer.service, diContainer.catsImageService)
+    }
 
     private val diContainer = DiContainer()
 
@@ -17,16 +28,20 @@ class MainActivity : AppCompatActivity() {
         val view = layoutInflater.inflate(R.layout.activity_main, null) as CatsView
         setContentView(view)
 
-        catsPresenter = CatsPresenter(diContainer.service, diContainer.catsImageService)
-        view.presenter = catsPresenter
-        catsPresenter.attachView(view)
-        catsPresenter.onInitComplete()
-    }
-
-    override fun onStop() {
-        if (isFinishing) {
-            catsPresenter.detachView()
+        findViewById<Button>(R.id.button).setOnClickListener {
+            catsViewModel.loadFact()
         }
-        super.onStop()
+
+        lifecycleScope.launch {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                catsViewModel.state.collect { result ->
+                    when (result) {
+                        is Load -> view.showMessage(result.message)
+                        is Success -> view.populate(result.value)
+                        is Error -> view.showMessage(result.message)
+                    }
+                }
+            }
+        }
     }
 }
